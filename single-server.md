@@ -152,24 +152,42 @@ curl -w '\n' -D - -X POST -H "Content-type: application/json" -d @/vagrant/tenan
 curl -w '\n' -D - -X POST -H "Content-type: application/json" -d '{"id":"okapi"}' http://localhost:9130/_/proxy/tenants/diku/modules
 ```
 
-## Build a Stripes platform
+## Build a Stripes workspace and platform
 1. Move to NodeJS LTS
 ```
 sudo n lts
 ```
-2. Clone the `folio-testing-platform` repository, `cd` into it
+2. Configure stripes for package caching
+```
+yarn config set experimental-pack-script-packages-in-mirror true
+yarn config set pack-built-packages true
+yarn config set yarn-offline-mirror "/tmp/yarn-offline-cache"
+```
+3. Create a workspace directory with a generic package.json file, `cd` into it
+```
+mkdir stripes-workspace
+cd stripes-workspace
+cat > package.json <<END
+{
+  "private": true,
+  "workspaces": [ "*" ],
+  "dependencies": {}
+}
+END
+```
+4. Clone the `folio-testing-platform` repository in the workspace, `cd` into it
 ```
 git clone https://github.com/folio-org/folio-testing-platform
 cd folio-testing-platform
 ```
-3. Install npm packages and build webpack
+5. Install npm packages and build webpack
   * *Note: if you're not building on a local Vagrant box, you'll need to update the Okapi URL setting in `./stripes.config.js` first*
 ```
 yarn install
 yarn build output --sourcemap
-cd ..
+cd ../..
 ```
-4. Configure webserver to serve Stripes webpack
+6. Configure webserver to serve Stripes webpack
   * [Sample nginx configuration](nginx-stripes.conf) 
 ```
 sudo cp /vagrant/nginx-stripes.conf /etc/nginx/sites-available/stripes
@@ -184,7 +202,7 @@ sudo systemctl restart nginx
   * Codex connector modules (mod-codex-inventory, mod-codex-ekb) don't get pulled in by dependency, so they need to be added manually to the list
   * [Sample perl script](gen-module-list.pl) to generate JSON array from Stripes build plus Codex modules
 ```
-perl /vagrant/gen-module-list.pl folio-testing-platform/ModuleDescriptors > enable.json
+perl /vagrant/gen-module-list.pl stripes-workspace/folio-testing-platform/ModuleDescriptors > enable.json
 ```
 2. Post list of modules to Okapi, let Okapi resolve dependencies and send back a list of modules to deploy (and later enable)
 ```
